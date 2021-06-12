@@ -69,6 +69,9 @@ char * getMIMEType(char* extension) {
 }
 
 void respond(int connFd, char* url, char* mime, char* method) {
+
+    char buf[MAXBUF];
+
     if ((strcasecmp(method,"GET") != 0) && strcasecmp(method,"HEAD") != 0) {
         // Method is not GET or HEAD
         errorMessage(buf, "501 Method Unimplemented");
@@ -76,7 +79,6 @@ void respond(int connFd, char* url, char* mime, char* method) {
 
     }
     else {
-        char buf[MAXBUF];
         int urlFd = open(url, O_RDONLY);
         
         if (urlFd < 0) {
@@ -86,7 +88,7 @@ void respond(int connFd, char* url, char* mime, char* method) {
         }
         struct stat fstatbuf;
         fstat(urlFd, &fstatbuf);
-        responseMessage(buf,fstat.st_size,mime);
+        responseMessage(buf,fstatbuf.st_size,mime);
         write_all(connFd, buf, strlen(buf));
 
         if (strcasecmp(method,"GET") == 0) {
@@ -107,12 +109,14 @@ void serveHttp(int connFd, char *rootFolder) {
 
     Request *request = parse(buf,MAXBUF,connFd);
 
-    char method[MAXBUF] = request->http_method;
+    char method[MAXBUF];
     char url[MAXBUF];
     //char version[MAXBUF] = request->http_version;
 
     char * fileExtension;
     char * mime;
+    
+    strcpy(method,request->http_method);
     
     // Url is <root>/<uri>
     strcpy(url,rootFolder);
@@ -152,7 +156,7 @@ void loop() {
 
     int listenFd = open_listenfd(port);
 
-    while (true) {
+    while (1) {
         struct sockaddr_storage clientAddr;
         socklen_t clientLen = sizeof(struct sockaddr_storage);
 

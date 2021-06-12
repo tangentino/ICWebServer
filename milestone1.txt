@@ -1,0 +1,36 @@
+commit cdcb98a33b03da2de9e0754258bc893996968300
+Author: Tangentino <tankongpithaksilp@gmail.com>
+Date:   Sat Jun 12 19:10:25 2021 +0700
+
+    Hopefully works. Otherwise Ill just fly away
+
+diff --git a/src/icws.c b/src/icws.c
+index 203e972..8bad7ff 100644
+--- a/src/icws.c
++++ b/src/icws.c
+@@ -3,8 +3,6 @@
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include <sys/socket.h>
+-#include <sys/mman.h>
+-#include <sys/wait.h>
+ #include <fcntl.h>
+ #include <unistd.h>
+ #include <getopt.h>
+@@ -82,7 +80,7 @@ void respond(int connFd, char* url, char* mime, char* method) {
+         int urlFd = open(url, O_RDONLY);
+         
+         if (urlFd < 0) {
+-            errorMessage(buf, "404 Not Found");
++            errorMessage(buf, "404 File Not Found");
+             write_all(connFd, buf, strlen(buf));
+             return;
+         }
+@@ -180,6 +178,6 @@ void loop() {
+ int main(int argc, char **argv) {
+ 
+     parseArgument(argc,argv);
+-
++    loop();
+     return 0;
+ }
