@@ -3,8 +3,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
-#include <sys/mman.h>
-#include <sys/wait.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <getopt.h>
@@ -82,7 +80,7 @@ void respond(int connFd, char* url, char* mime, char* method) {
         int urlFd = open(url, O_RDONLY);
         
         if (urlFd < 0) {
-            errorMessage(buf, "404 Not Found");
+            errorMessage(buf, "404 File Not Found");
             write_all(connFd, buf, strlen(buf));
             return;
         }
@@ -180,6 +178,6 @@ void loop() {
 int main(int argc, char **argv) {
 
     parseArgument(argc,argv);
-
+    loop();
     return 0;
 }
