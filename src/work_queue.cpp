@@ -2,6 +2,8 @@
 #include <pthread.h>
 #include <sys/socket.h>
 
+using namespace std;
+
 struct work_queue {
 	deque<int> jobQueue;
 	pthread_mutex_t jobMutex;
@@ -24,6 +26,6 @@ struct work_queue {
 		pthread_mutex_unlock(&this->jobMutex);
 		return success;
 	}
-}
+};
 
 

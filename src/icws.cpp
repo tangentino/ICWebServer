@@ -8,13 +8,19 @@
 #include <getopt.h>
 #include <string.h>
 #include <netdb.h>
-#include "parse.h"
-#include "pcsa_net.h"
-#include "work_queue.c"
+#include <iostream>
+#include <pthread.h>
+#include <time.h>
+extern "C" {
+    #include "parse.h"
+    #include "pcsa_net.h"
+}
+#include "work_queue.cpp"
 
 #define MAXBUF 1024
 
 typedef struct sockaddr SA;
+using namespace std;
 
 char * port;
 char * root;
@@ -29,13 +35,13 @@ static const char* MONTH_NAMES[] = {
 };
 
 char *getCurrentDateTime(){
-    const int time = 29;
+    const int TIME = 29;
     time_t t;
     struct tm tm;
-    char* buf = (char *)malloc(time+1);
+    char* buf = (char *)malloc(TIME+1);
     time(&t);
     gmtime_r(&t, &tm);
-    strftime(buf, time+1, "%a, %d %b %Y %H:%M:%S GMT", &tm);
+    strftime(buf, TIME+1, "%a, %d %b %Y %H:%M:%S GMT", &tm);
     memcpy(buf, DAY_NAMES[tm.tm_wday], 3);
     memcpy(buf, MONTH_NAMES[tm.tm_mon], 3);
     return buf;
