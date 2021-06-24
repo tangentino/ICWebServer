@@ -10,6 +10,7 @@
 #include <netdb.h>
 #include "parse.h"
 #include "pcsa_net.h"
+#include "work_queue.c"
 
 #define MAXBUF 1024
 
@@ -18,6 +19,27 @@ typedef struct sockaddr SA;
 char * port;
 char * root;
 
+static const char* DAY_NAMES[] = {
+    "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
+};
+
+static const char* MONTH_NAMES[] = {
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+};
+
+char *getCurrentDateTime(){
+    const int time = 29;
+    time_t t;
+    struct tm tm;
+    char* buf = (char *)malloc(time+1);
+    time(&t);
+    gmtime_r(&t, &tm);
+    strftime(buf, time+1, "%a, %d %b %Y %H:%M:%S GMT", &tm);
+    memcpy(buf, DAY_NAMES[tm.tm_wday], 3);
+    memcpy(buf, MONTH_NAMES[tm.tm_mon], 3);
+    return buf;
+}
 
 char * errorMessage(char* buf, char* msg) {
     // Error response
@@ -31,13 +53,16 @@ char * errorMessage(char* buf, char* msg) {
 }
 
 char * responseMessage(char* buf, unsigned long size, char* mime) {
+	char *dateTime = getCurrentDateTime();
     sprintf(buf,
         "HTTP/1.1 200 OK\r\n"
+		"Date: %s\r\n"
         "Server: ICWS\r\n"
         "Connection: close\r\n"
         "Content-Length: %lu\r\n"
-        "Content-Type: %s\r\n\r\n",
-        size, mime
+        "Content-Type: %s\r\n"
+		"Last-Modified: %s\r\n\r\n",
+        time, size, mime, time
     );
     return buf;
 }
