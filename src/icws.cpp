@@ -13,16 +13,19 @@
 #include <time.h>
 #include <mutex>
 #include <thread>
+#include <string>
+#include <cstring>
 extern "C" {
     #include "parse.h"
     #include "pcsa_net.h"
 }
 #include "work_queue.cpp"
 
-#define MAXBUF 1024
+#define MAXBUF 8192
+
+using namespace std;
 
 typedef struct sockaddr SA;
-using namespace std;
 
 char * port;
 char * root;
@@ -144,8 +147,9 @@ void serveHttp(int connFd, char *rootFolder) {
 
     char buf[MAXBUF];
 
+    int readRequest = read(connFd,buf,MAXBUF);
     mtx.lock();
-    Request *request = parse(buf,MAXBUF,connFd);
+    Request *request = parse(buf,readRequest,connFd);
     mtx.unlock();
 
     char method[MAXBUF];
@@ -181,7 +185,7 @@ void parseArgument(int argc, char **argv) {
 
 	int ch = 0;
 
-    while ((ch = getopt_long(argc, argv, "p:r:", longOptions, NULL)) != -1) {
+    while ((ch = getopt_long(argc, argv, "p:r:n:t:", longOptions, NULL)) != -1) {
         switch(ch) {
             case 'p':
                 port = optarg;
@@ -200,7 +204,7 @@ void parseArgument(int argc, char **argv) {
 }
 
 void doWork() {
-    while (1) {
+    while (true) {
         int w;
         if (workQueue.removeJob(&w)) {
             if (w < 0) {
@@ -225,7 +229,7 @@ void server() {
 
     int listenFd = open_listenfd(port);
 
-    while (1) {
+    while (true) {
         struct sockaddr_storage clientAddr;
         socklen_t clientLen = sizeof(struct sockaddr_storage);
 
@@ -248,8 +252,9 @@ void server() {
 }
 
 int main(int argc, char **argv) {
-
+    printf("Parsing");
     parseArgument(argc,argv);
+    printf("Parsed");
     server();
     return 0;
 }
