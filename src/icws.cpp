@@ -252,9 +252,7 @@ void server() {
 }
 
 int main(int argc, char **argv) {
-    printf("Parsing");
     parseArgument(argc,argv);
-    printf("Parsed");
     server();
     return 0;
 }
