@@ -11,6 +11,8 @@
 #include <iostream>
 #include <pthread.h>
 #include <time.h>
+#include <mutex>
+#include <thread>
 extern "C" {
     #include "parse.h"
     #include "pcsa_net.h"
@@ -24,6 +26,10 @@ using namespace std;
 
 char * port;
 char * root;
+int numThreads, timeout;
+
+mutex mtx;
+work_queue workQueue;
 
 static const char* DAY_NAMES[] = {
     "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
@@ -138,7 +144,9 @@ void serveHttp(int connFd, char *rootFolder) {
 
     char buf[MAXBUF];
 
+    mtx.lock();
     Request *request = parse(buf,MAXBUF,connFd);
+    mtx.unlock();
 
     char method[MAXBUF];
     char url[MAXBUF];
@@ -166,6 +174,8 @@ void parseArgument(int argc, char **argv) {
     static struct option longOptions[] = {
         {"port",required_argument,NULL,'p'},
         {"root",required_argument,NULL,'r'},
+        {"numThreads",required_argument,NULL,'n'},
+        {"timeout",required_argument,NULL,'t'},
         {NULL, 0, NULL, 0}
     };
 
@@ -179,11 +189,39 @@ void parseArgument(int argc, char **argv) {
             case 'r':
                 root = optarg;
                 break;
+            case 'n':
+                numThreads = atoi(optarg);
+                break;
+            case 't':
+                timeout = atoi(optarg);
+                break;
         }
     }
 }
 
-void loop() {
+void doWork() {
+    while (1) {
+        int w;
+        if (workQueue.removeJob(&w)) {
+            if (w < 0) {
+                break;
+            }
+            serveHttp(w,root);
+            close(w);
+        }
+        else {
+            usleep(250000);
+        }
+    }
+}
+
+void server() {
+
+    thread worker[numThreads];
+
+    for (int i = 0; i < numThreads; i++) {
+        worker[i] = thread(doWork);
+    }
 
     int listenFd = open_listenfd(port);
 
@@ -205,14 +243,13 @@ void loop() {
         else {
             printf("Connection from ?UNKNOWN?\n");
         }
-        serveHttp(connFd,root);
-        close(connFd);
+        workQueue.addJob(connFd);
     }
 }
 
 int main(int argc, char **argv) {
 
     parseArgument(argc,argv);
-    loop();
+    server();
     return 0;
 }
