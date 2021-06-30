@@ -15,6 +15,7 @@
 #include <thread>
 #include <string>
 #include <cstring>
+#include <poll.h>
 extern "C" {
     #include "parse.h"
     #include "pcsa_net.h"
@@ -32,7 +33,9 @@ char * root;
 int numThreads, timeout;
 
 mutex mtx;
-work_queue workQueue;
+struct {
+    work_queue workQueue;
+} shared;
 
 static const char* DAY_NAMES[] = {
     "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
@@ -147,7 +150,28 @@ void serveHttp(int connFd, char *rootFolder) {
 
     char buf[MAXBUF];
 
-    int readRequest = read(connFd,buf,MAXBUF);
+    int readRequest;
+    struct pollfd pfd[1];
+
+    while (true) {
+        pfd[0].fd = connFd;
+        pfd[0].events = POLLIN;
+        int ret = poll(pfd,1,timeout);
+        
+        if (ret < 0) {
+            errorMessage(buf,"400 Bad Request");
+            write_all(connFd,buf,strlen(buf));
+        }
+        else if (ret == 0) {
+            errorMessage(buf,"408 Request Timeout");
+            write_all(connFd,buf,strlen(buf));
+        }
+        else if ((pfd[0].fd == connFd) && (pfd[0].revents == POLLIN)) {
+            ret = read(connFd,buf,MAXBUF);
+            break;
+        }
+    }
+
     mtx.lock();
     Request *request = parse(buf,readRequest,connFd);
     mtx.unlock();
@@ -206,7 +230,7 @@ void parseArgument(int argc, char **argv) {
 void doWork() {
     while (true) {
         int w;
-        if (workQueue.removeJob(&w)) {
+        if (shared.workQueue.removeJob(&w)) {
             if (w < 0) {
                 break;
             }
@@ -247,7 +271,7 @@ void server() {
         else {
             printf("Connection from ?UNKNOWN?\n");
         }
-        workQueue.addJob(connFd);
+        shared.workQueue.addJob(connFd);
     }
 }
 
